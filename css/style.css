@@ -1,0 +1,65 @@
+body
+{
+    /*width:500px;*/
+    font-family:Arial, Helvetica, Sans Serif;
+}
+
+#cabecalho
+{
+    text-align:center;
+    font-size:14pt;
+    font-weight:bold;
+}
+#form_imagens
+{
+    width:400px;
+}
+
+label
+{
+    width:140px;
+    float:left;
+}
+
+.campoFile
+{
+    width:300px;
+}
+
+.campoAlturaLargura
+{
+    width:75px;
+}
+
+/* CSS da popup de erro/informação */
+#popup
+{
+    width:500px;
+    margin:auto auto;
+    z-index:2147483647;
+    cursor:pointer;
+}
+
+#err
+{
+    background-color:#FFC7C7;
+    border:1px solid #DE3B3B;
+}
+
+#inf
+{
+    background-color:#C7C7FF;
+    border:1px solid #3B5998;
+}
+
+.titulo
+{
+    font-weight:bold;
+    text-align:center;
+}
+
+.mensagem
+{
+    text-align:left;
+}
+
