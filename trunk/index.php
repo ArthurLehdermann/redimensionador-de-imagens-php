@@ -5,6 +5,12 @@
         <title>Redimensionador de imagens</title>
         <link rel="stylesheet" type="text/css" href="css/style.css"/>
         <script type="text/javascript" language="JavaScript" src="js/script.js"></script>
+        <link rel="shortcut icon" href="media/favicon.ico" type="image/x-icon"/>
+<style>
+body {background-image: url(http://www.univates.br/media/sistemas/verde.png);}
+.direita {margin-left:300px;width:400px;-moz-border-radius:4px;border-radius:4px;border: 1px solid #BBBBBB; }
+#form_imagens {margin: 0 auto; width:1000px;}
+</style>
     </head>
     <body>
         <div id="header">
@@ -19,12 +25,12 @@
                 </div>
             </div>
             <div id="cabecalho">
-                Redimensionador de imagens v1.0 ;-)
+                <img src="http://www.univates.br/media/sistemas/lupa.png" style="width:55px;height:43px;margin-bottom:-14px;"> Redimensionador de imagens v1.0 ;-)
                 <hr>
             </div>
         </div>
         <form id="form_imagens" name="form_imagens" method="post" action="" enctype="multipart/form-data">
-            <fieldset>
+            <fieldset class="direita">
                 <legend>
                     Preferências
                 </legend>
@@ -48,21 +54,26 @@
                         </span>
                 </div>
             </fieldset>
-            <fieldset>
+            <fieldset class="direita" >
                 <legend>Imagens compactadas (.zip)</legend>
-                <label>Arquivo .zip:</label>
-                <input type="file" id="compactado" name="compactado" class="campoFile"/>
+                <label>Arquivo(s) .zip:</label>
+                <br style="clear:both;">
+                <div id="div_zips">
+                    <!-- Campos de arquivos .ZIP -->
+                    <script>add_zipField();</script>
+                </div>
             </fieldset>
-            <fieldset>
+            <fieldset class="direita">
                 <legend>
                     Imagens:
                 </legend>
                 <div id="div_imagens">
                     <!-- Campos de imagem -->
-                    <script>add_filefield();</script>
+                    <script>add_fileField();</script>
                 </div>
             </fieldset>
-            <input type="submit" value="Enviar" style="float:right;"/>
+            <br />
+            <center><input type="submit" style="margin-left:300px;" value="Enviar" /></center>
             <input type="hidden" name="enviado" value="1"/>
         </form>
     </body>
@@ -73,28 +84,63 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
 {
     try
     {
+        // Inclui a classe que trabalha nas imagens
         require("imagem.class.php");
 
-        $dir = 'media/imagens';
+        // Define alguns diretórios
+        $dir = '/tmp/redimensionador_imagens/imagens';
         $dirCompactadas = $dir.'/compactadas';
         $dirDescompactadas = $dir.'/descompactadas';
 
-        $fotosEnviadas = arrumaArrayFiles($_FILES['imagens']);
-        if ( strlen($_FILES['compactado']['tmp_name']) > 0 )
+        // Se necessário, cria os diretórios (visto que estão no /tmp)
+        // /tmp/redimensionador_imagens
+        if ( !in_array('redimensionador_imagens', scandir('/tmp')) )
         {
-            $fotosCompactadas = obterFotosCompactadas($dirDescompactadas, $_FILES['compactado']['tmp_name']);
+            exec('mkdir /tmp/redimensionador_imagens');
         }
+        // /tmp/redimensionador_imagens/imagens
+        if ( !in_array('imagens', scandir('/tmp')) )
+        {
+            exec('mkdir '.$dir);
+        }
+        // /tmp/redimensionador_imagens/imagens/compactadas
+        if ( !in_array('compactadas', scandir($dir)) )
+        {
+            exec('mkdir '.$dirCompactadas);
+        }
+        // /tmp/redimensionador_imagens/imagens/descompactadas
+        if ( !in_array('descompactadas', scandir($dir)) )
+        {
+            exec('mkdir '.$dirDescompactada);
+        }
+
+        // Obtém as imagens "upadas"
+        $fotosEnviadas = arrumaArrayFiles($_FILES['imagens']);
+        $fotosCompactadasEnviadas = arrumaArrayFiles($_FILES['compactadas']);
+
+        // Caso tenha aqruivos comprimidos, obtém as imagens deletes
+        if ( count($fotosCompactadasEnviadas) > 0 )
+        {
+            $fotosCompactadas = array();
+            foreach ( $fotosCompactadasEnviadas as $fotosCompactadas )
+            {
+                $fotosCompactadas = array_merge(obterFotosCompactadas($dirDescompactadas, $fotosCompactadas), $fotosCompactadas);
+            }
+        }
+        // Junta todas as imagens
         $fotos = array_merge($fotosEnviadas, (array)$fotosCompactadas);
 
+        // Opção de conversão de formato de imagem
         $converterPara = ($_POST['converter']) ? $_POST['converterPara'] : null;
     
-        // Converte/renomeia/redimensiona
+        // Converte/redimensiona
         $imagem = new imagem($fotos, $_POST['altura'], $_POST['largura'], $dir, $converterPara);
 
+        // Imagens prontas
         $novasImagens = $imagem->obterDiretorioNovasImagens();
 
         // Compacta a pasta com as imagens
-        $compactadas = compactarImagens($novasImagens, $dirCompactadas);
+        //$compactadas = compactarImagens($novasImagens, $dirCompactadas);
 
         if ( strlen($novasImagens) > 0 )
         {
@@ -113,11 +159,11 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
     }
 }
 
-function arrumaArrayFiles($array = array())
+function arrumaArrayFiles($array)
 {
     $new = array();
 
-    foreach ( $array as $key => $value )
+    foreach ( (array)$array as $key => $value )
     {
         foreach ( $value as $k => $val )
         {
@@ -125,8 +171,6 @@ function arrumaArrayFiles($array = array())
             if ( strlen($array['name'][$k]) > 0 )
             {
                 $new[$k][$key] = $val;
-                // Acrescenta o novo nome
-                $new[$k]['novo_nome'] = $_POST['nome_imagem'][$k];
             }
         }
     }
