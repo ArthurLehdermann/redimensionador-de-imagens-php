@@ -12,6 +12,7 @@ class imagem
      */
     const ERRO_SEM_IMAGEM = 'Você precisa informar ao menos uma imagem para ser redimensionada.';
     const ERRO_FORMATO_NAO_SUPORTADO = 'O formato <b>$imagemType</b> infelizmente ainda não é suportado.';
+    const ERRO_CRIAR_NOVA_IMAGEM_GD = 'Não foi possível inicializar nova imagem GD.';
     const ERRO_CRIAR_NOVA_IMAGEM = 'Erro ao criar imagem temporária $n.';
     const ERRO_LIBERA_MEMORIA = 'Erro ao apagar imagem temporária $n.';
     const ERRO_CONVERTER = 'Desculpe, mas infelizmente ainda não é possível converter as imagens para o formato <b>$converterPara</b>.';
@@ -67,8 +68,8 @@ class imagem
         {
             // Obtém o nome do diretório onde serão salvas as imagens redimensionadas
             $pasta = gerarNomeDiretorio($this->pasta);
-
             // Cria um novo diretório
+
             exec("mkdir $pasta");
 
             // Quantidade de imagens a serem redimensionadas
@@ -103,7 +104,12 @@ class imagem
                         $nome_novo .= ($i+1).'-';
                     }
                     $nome_novo .= removeSpecialChars($nome).'.'.$extensao;
+                    flog('---------------------------');
+                    flog('Gerando imagem: '.$nome_novo);
+                    flog('com largura máxima: '.$larguraMax);
+                    flog('e altura máxima: '.$alturaMax);
                     $this->gerarImagem($imagem, $alturaMax, $larguraMax, $pasta, $nome_novo, $this->converterPara);
+                    flog('Imagem gerada com sucesso!');
                 }
             }
         }
@@ -176,104 +182,113 @@ class imagem
         $novasDimensoes = $this->calcularNovasDimensoes($alturaOriginal, $larguraOriginal, $alturaMax, $larguraMax);
         $altura = $novasDimensoes['altura'];
         $largura = $novasDimensoes['largura'];
+        flog('nova largura: '.$largura);
+        flog('nova altura: '.$altura);
 
-        // Mantém transparência para PNG
-        $isTrueColor = imageIsTrueColor($img);
-        if ( $isTrueColor )
+        // Cria nova imagem
+        if ( $nova = imageCreateTrueColor($largura, $altura) )
         {
-            $nova = imageCreateTrueColor($largura, $altura);
             imageAlphaBlending($nova, false);
-            imageSaveAlpha($nova, true);
-        }
-        else
-        {
-            $nova = imageCreate($largura, $altura);
-            imageAlphaBlending($nova, false);
-            $transparent = imageColorAllocateAlpha($nova, 0, 0, 0, 127);
-            imageFill($nova, 0, 0, $transparent);
-            imageSaveAlpha($nova, true);
-            imageAlphaBlending($nova, true);
-        }
 
-        // Copia a imagem para o diretório destino ($this->pasta)
-        $msg = self::ERRO_CRIAR_NOVA_IMAGEM;
-        if ( !imagecopyresampled($nova, $img, 0, 0, 0, 0, $largura, $altura, $larguraOriginal, $alturaOriginal) )
-        {
-            $msg = str_replace('$n', '1', $msg);
-            throw new Exception($msg);
-        }
-        if ( !is_null($converterPara) )
-        {
-            if ( $converterPara == 'jpg' )
+            // Mantém transparência para PNG
+            $isTrueColor = imageIsTrueColor($img);
+            if ( $isTrueColor )
             {
-                $nomeArray = explode('.', $nome);
-                $nomeArray[count($nomeArray)-1] = 'jpg';
-                $nome = implode('.', $nomeArray);
-                if ( !imagejpeg($nova, $pasta."/".$nome) )
-                {
-                    $msg = str_replace('$n', '2', $msg);
-                    throw new Exception($msg);
-                }
+                imageSaveAlpha($nova, true);
             }
-            elseif( $converterPara == 'png' )
+            else
             {
-                $nomeArray = explode('.', $nome);
-                $nomeArray[count($nomeArray)-1] = 'png';
-                $nome = implode('.', $nomeArray);
-                if ( !imagepng($nova, $pasta."/".$nome) )
+                $transparent = imageColorAllocateAlpha($nova, 0, 0, 0, 127);
+                imageFill($nova, 0, 0, $transparent);
+                imageSaveAlpha($nova, true);
+                imageAlphaBlending($nova, true);
+            }
+
+            // Copia a imagem para o diretório destino ($this->pasta)
+            $msg = self::ERRO_CRIAR_NOVA_IMAGEM;
+            if ( !imagecopyresampled($nova, $img, 0, 0, 0, 0, $largura, $altura, $larguraOriginal, $alturaOriginal) )
+            {
+                $msg = str_replace('$n', '1', $msg);
+                throw new Exception($msg);
+            }
+
+            if ( !is_null($converterPara) )
+            {
+                if ( $converterPara == 'jpg' )
                 {
-                    $msg = str_replace('$n', '3', $msg);
+                    $nomeArray = explode('.', $nome);
+                    $nomeArray[count($nomeArray)-1] = 'jpg';
+                    $nome = implode('.', $nomeArray);
+                    if ( !imagejpeg($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '2', $msg);
+                        throw new Exception($msg);
+                    }
+                }
+                elseif( $converterPara == 'png' )
+                {
+                    $nomeArray = explode('.', $nome);
+                    $nomeArray[count($nomeArray)-1] = 'png';
+                    $nome = implode('.', $nomeArray);
+                    if ( !imagepng($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '3', $msg);
+                        throw new Exception($msg);
+                    }
+                }
+                else
+                {
+                    $msg = self::ERRO_CONVERTER;
+                    $msg = str_replace('$converterPara', $converterPara, $msg);
                     throw new Exception($msg);
                 }
             }
             else
             {
-                $msg = self::ERRO_CONVERTER;
-                $msg = str_replace('$converterPara', $converterPara, $msg);
-                throw new Exception($msg);
+                // JPG / JPEG
+                if ( $imagem['type'] == 'image/jpeg' )
+                {
+                    if ( !imagejpeg($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '4', $msg);
+                        throw new Exception($msg);
+                    }
+                }
+                // PNG
+                elseif ( $imagem['type'] == 'image/png' )
+                {
+                    if ( !imagepng($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '5', $msg);
+                        throw new Exception($msg);
+                    }
+                }
+                // GIF
+                elseif ( $imagem['type'] == 'image/gif' )
+                {
+                    if ( !imagegif($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '6', $msg);
+                        throw new Exception($msg);
+                    }
+                }
+                // BMP - converte para png
+                elseif ( $imagem['type'] == 'image/bmp' )
+                {
+                    $nomeArray = explode('.', $nome);
+                    $nomeArray[count($nomeArray)-1] = 'png';
+                    $nome = implode('.', $nomeArray);
+                    if ( !imagepng($nova, $pasta."/".$nome) )
+                    {
+                        $msg = str_replace('$n', '7', $msg);
+                        throw new Exception($msg);
+                    }
+                }
             }
         }
         else
         {
-            // JPG / JPEG
-            if ( $imagem['type'] == 'image/jpeg' )
-            {
-                if ( !imagejpeg($nova, $pasta."/".$nome) )
-                {
-                    $msg = str_replace('$n', '4', $msg);
-                    throw new Exception($msg);
-                }
-            }
-            // PNG
-            elseif ( $imagem['type'] == 'image/png' )
-            {
-                if ( !imagepng($nova, $pasta."/".$nome) )
-                {
-                    $msg = str_replace('$n', '5', $msg);
-                    throw new Exception($msg);
-                }
-            }
-            // GIF
-            elseif ( $imagem['type'] == 'image/gif' )
-            {
-                if ( !imagegif($nova, $pasta."/".$nome) )
-                {
-                    $msg = str_replace('$n', '6', $msg);
-                    throw new Exception($msg);
-                }
-            }
-            // BMP - converte para png
-            elseif ( $imagem['type'] == 'image/bmp' )
-            {
-                $nomeArray = explode('.', $nome);
-                $nomeArray[count($nomeArray)-1] = 'png';
-                $nome = implode('.', $nomeArray);
-                if ( !imagepng($nova, $pasta."/".$nome) )
-                {
-                    $msg = str_replace('$n', '7', $msg);
-                    throw new Exception($msg);
-                }
-            }
+            throw new Exception(self::ERRO_CRIAR_NOVA_IMAGEM_GD);
         }
 
         /*
@@ -291,6 +306,7 @@ class imagem
             throw new Exception($msg);
         }
 
+        flog('salva em: '.$pasta.'/'.$nome);
         return $pasta.'/'.$nome;
     }
 
@@ -565,8 +581,9 @@ function gerarNomeDiretorio($baseDir)
     // Cria uma pasta por dia
     if ( !in_array($data, (array)scandir($baseDir)) )
     {
-        exec('mkdir '.$basedir.'/'.$data);
+        exec('mkdir '.$baseDir.'/'.$data);
     }
+
 
     // Gera um nomealeatório 6numeros
     $nome = getRandomNumbers();
@@ -594,28 +611,41 @@ function getRandomNumbers()
 
 /**
  * Compacta as imagens de um diretório
- * @param $dir Destino das imagens a serem compactadas
+ * @param $dir Diretório das imagens a serem compactadas
  * @param $destDir Destino do arquivo.zip
  */
 function compactarImagens($dir, $destDir, $nomeDoArquivo)
 {
+    flog('');
+    flog('Compactando imagens...');
     if ( strlen($nomeDoArquivo) > 0 )
     {
         $nomeDoArquivo = 'imagens_redimensionadas';
     }
     $newFile = $destDir.'/'.$nomeDoArquivo.getRandomNumbers().'.zip';
 
-    // Load the Library
-    require("libs/zip.lib.php");
+    // Criando o pacote
+    $zip = new ZipArchive();
+    $criou = $zip->open($newFile, ZipArchive::CREATE);
+    if ( $criou )
+    {
+        // Adicionando as imagens redimensionadas
+        foreach ( (array)glob($dir.'*', GLOB_BRACE) as $file )
+        {
+            // Copiando arquivo
+            $zip->addFile($file);
+        }
 
-    // Generate a new object
-    $zipfile = new zipFile($newFile);
+        // Salvando o arquivo
+        $zip->close();
+    }
+    else
+    {
+        throw new Exception('Erro: '.$criou);
+    }
 
-    // Add a folder
-    $zipfile->addDirContent("./");
-
-    // Output the new zip file
-    return $zipfile->file();
+    flog('imagens compactadas: '.$newFile);
+    return $newFile;
 }
 
 /**
@@ -625,7 +655,8 @@ function compactarImagens($dir, $destDir, $nomeDoArquivo)
  */
 function descompactarImagens($dir, $arquivo)
 {
-    $dest_dir = $dir . '/';
+    flog('Descompactando imagens de: '.$arquivo);
+    $dest_dir = $dir.'/';
     if ( strlen($arquivo['tmp_name']) > 0 )
     {
         $arquivo = $arquivo['tmp_name'];
@@ -636,12 +667,16 @@ function descompactarImagens($dir, $arquivo)
     {
         $zip->extractTo($dest_dir);
         $zip->close();
+        flog('Removendo o que não é imagem...');
         removeLixo($dest_dir);
+        flog('removido "lixo".');
     }
     else
     {
         throw new Exception('Não foi possível abrir o arquivo comprimido com as imagens.');
     }
+
+    flog('imagens descompactadas em: '.$dest_dir);
 }
 
 /**
@@ -669,27 +704,34 @@ function removeLixo($dir)
             $mime_type = image_type_to_mime_type(exif_imagetype($file));
             if ( !in_array($mime_type, $valid_headers) )
             {
-                flog('apagando: '.$file);
+                // Apaga o que não é imagem
                 exec('rm -Rf '.$file);
             }
             else
             {
+                // Corrige o nome do arquivo e a extensao 
                 $array = explode('/', $file);
                 $nomeDoArquivo = $array[count($array)-1];
                 unset($array[count($array)-1]);
                 $base_dir = implode('/', $array);
 
+                // Somente o nome do arquivo (sem extensão)
                 $array = explode('.', $nomeDoArquivo);
                 unset($array[count($array)-1]);
-                $novoNome = removeSpecialChars(implode('.', $array));
+                if ( strlen($array[0]) > 0 )
+                {
+                    $nomeDoArquivo = implode('.', $array);
+                }
+                $novoNome = removeSpecialChars($nomeDoArquivo);
+
+                // Extensão
                 if ( $mime_type == 'image/jpeg' ) { $extensao = 'jpg'; }
                 if ( $mime_type == 'image/png' ) { $extensao = 'png'; }
                 if ( $mime_type == 'image/gif' ) { $extensao = 'gif'; }
                 if ( $mime_type == 'image/bmp' ) { $extensao = 'bmp'; }
                 $fileNew = $base_dir.'/'.$novoNome.'.'.$extensao;
-                flog($file);
-                flog($fileNew);
-                exec('mv '.$file.' '.$fileNew);
+
+                exec('mv '.str_replace(' ', '\\ ', $file).' '.$fileNew);
             }
         }
     }
@@ -703,16 +745,39 @@ function obterFotosCompactadas($dir, $arquivo)
     $dir = gerarNomeDiretorio($dir);
     // Cria um novo diretório
     exec("mkdir $dir");
-    
+
     descompactarImagens($dir, $arquivo);
 
-    $imagens = array();
-    foreach ( glob($dir.'/*.*') as $k => $img )
+    return obterArquivos($dir);
+}
+
+/**
+ * Retorna um array com todos os arquivos de um diretório
+ * @param $dir Diretório de onde será lido os arquivos
+ * @return array
+ */
+function obterArquivos($dir)
+{
+    if ( substr($dir, -1) != '/' )
     {
-        $nomeArray = explode('/',$img);
-        $imagens[$k]['name'] = $nomeArray[count($nomeArray)-1];
-        $imagens[$k]['type'] = image_type_to_mime_type(exif_imagetype($img)); // Obtém o "type"
-        $imagens[$k]['tmp_name'] = $img;
+        $dir .= '/';
+    }
+
+    $imagens = array();
+    // Já descompactou, agora monta um array com todas elas (aqui se perde a hierarquia de diretórios que existia dentro do .zip)
+    foreach ( (array)glob($dir."*", GLOB_BRACE) as $k => $file ) 
+    {
+        if ( is_dir($file) )
+        {
+            $imagens = array_merge($imagens, obterArquivos($file));
+        }
+        else
+        {
+            $nomeArray = explode('/',$file);
+            $imagens[$k]['name'] = $nomeArray[count($nomeArray)-1];
+            $imagens[$k]['type'] = image_type_to_mime_type(exif_imagetype($file)); // Obtém o "type"
+            $imagens[$k]['tmp_name'] = $file;
+        }
     }
 
     return $imagens;
@@ -738,7 +803,7 @@ function removeSpecialChars($oldText)
 
     if ( !(strlen($newText) > 0) )
     {
-        $newText = 'nome_invalido'.getRandomNumbers().getRandomNumbers();
+        $newText = 'nome_invalido-'.getRandomNumbers().getRandomNumbers();
     }
 
     return $newText;

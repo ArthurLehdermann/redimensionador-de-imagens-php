@@ -25,7 +25,7 @@ body {background-image: url(http://www.univates.br/media/sistemas/verde.png);}
                 </div>
             </div>
             <div id="cabecalho">
-                <img src="http://www.univates.br/media/sistemas/lupa.png" style="width:55px;height:43px;margin-bottom:-14px;"> Redimensionador de imagens v1.0 ;-)
+                <img src="http://www.univates.br/media/sistemas/lupa.png" style="width:55px;height:43px;margin-bottom:-14px;"> Redimensionador de imagens v2.0 ;-)
                 <hr>
             </div>
         </div>
@@ -111,24 +111,24 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
         // /tmp/redimensionador_imagens/imagens/descompactadas
         if ( !in_array('descompactadas', scandir($dir)) )
         {
-            exec('mkdir '.$dirDescompactada);
+            exec('mkdir '.$dirDescompactadas);
         }
 
         // Obtém as imagens "upadas"
-        $fotosEnviadas = arrumaArrayFiles($_FILES['imagens']);
+        $fotos = arrumaArrayFiles($_FILES['imagens']);
         $fotosCompactadasEnviadas = arrumaArrayFiles($_FILES['compactadas']);
 
         // Caso tenha aqruivos comprimidos, obtém as imagens deletes
         if ( count($fotosCompactadasEnviadas) > 0 )
         {
-            $fotosCompactadas = array();
-            foreach ( $fotosCompactadasEnviadas as $fotosCompactadas )
+            foreach ( $fotosCompactadasEnviadas as $zip )
             {
-                $fotosCompactadas = array_merge(obterFotosCompactadas($dirDescompactadas, $fotosCompactadas), $fotosCompactadas);
+                foreach ( obterFotosCompactadas($dirDescompactadas, $zip) as $compactadas )
+                {
+                    $fotos[] = $compactadas;
+                }
             }
         }
-        // Junta todas as imagens
-        $fotos = array_merge($fotosEnviadas, (array)$fotosCompactadas);
 
         // Opção de conversão de formato de imagem
         $converterPara = ($_POST['converter']) ? $_POST['converterPara'] : null;
@@ -140,12 +140,12 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
         $novasImagens = $imagem->obterDiretorioNovasImagens();
 
         // Compacta a pasta com as imagens
-        //$compactadas = compactarImagens($novasImagens, $dirCompactadas);
+        $compactadas = compactarImagens($novasImagens, $dirCompactadas);
 
         if ( strlen($novasImagens) > 0 )
         {
             echo "<script>informacao('Imagens redimensionadas com sucesso!');</script>";
-            echo "<br /><a href=\"listarimagens.php?path=$novasImagens\" target=\"_blank\">Clique aqui</a> para vê-las.<br /> Ou <a href=\"$compactadas\" target=\"_blank\">clique aqui</a> para fazer o download.";
+            echo "<br /><a href=\"listarimagens.php?path=media$novasImagens\" target=\"_blank\">Clique aqui</a> para vê-las.<br /> Ou <a href=\"media$compactadas\" target=\"_blank\">clique aqui</a> para fazer o download.";
         }
         else
         {
