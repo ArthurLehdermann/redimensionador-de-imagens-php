@@ -96,12 +96,6 @@ class imagem
                         $nome = $imagem['novo_nome'];
                     }
 
-                    // Se corrige os acentos com iso, taca iso
-                    if ( strlen($nome) > strlen(utf8_decode($nome)) )
-                    {
-                        $nome = utf8_decode($nome);
-                    }
-
                     // Altera o nome
                     $nome_novo = '';
                     if ( $quantidade > 1 )
@@ -562,17 +556,29 @@ class imagem
 
 /**
  * Gera um nome de diretório aleatório
+ * @recursive
  * @return String
  */
 function gerarNomeDiretorio($baseDir)
 {
-    // Gera um nome ano-mes-dia_6numeros
-    $nome = $baseDir.'/'.date('Y-m-d_').getRandomNumbers();
+    $data = date('Y-m-d');
+    // Cria uma pasta por dia
+    if ( !in_array($data, (array)scandir($baseDir)) )
+    {
+        exec('mkdir '.$basedir.'/'.$data);
+    }
+
+    // Gera um nomealeatório 6numeros
+    $nome = getRandomNumbers();
 
     // Caso já exista gera outro
-    if ( in_array($nome, (array)scandir($baseDir)) )
+    if ( in_array($nome, (array)scandir($baseDir.'/'.$data)) )
     {
-        $nome = gerarNomeDiretorio();
+        $nome = gerarNomeDiretorio($baseDir);
+    }
+    else
+    {
+        $nome = $baseDir.'/'.$data.'/'.$nome;
     }
 
     return $nome;
@@ -593,42 +599,20 @@ function getRandomNumbers()
  */
 function compactarImagens($dir, $destDir, $nomeDoArquivo)
 {
-    // Remove os arquivos velhos
-    exec('bash media/imagens/compactadas/remove_arquivos_velhos.sh');
-
-    if ( is_null($nomeDoArquivo) )
+    if ( strlen($nomeDoArquivo) > 0 )
     {
         $nomeDoArquivo = 'imagens_redimensionadas';
     }
     $newFile = $destDir.'/'.$nomeDoArquivo.getRandomNumbers().'.zip';
 
-    //$zip = new ZipArchive();
-    /*
-    if ( $zip->open($newFile, ZipArchive::OVERWRITE) )
-    {
-       foreach( glob($dir.'/*.*') as $current )
-       {
-           $zip->addFile($current, basename($current));
-       }
-       $zip->close();
-    }
-    else
-    {
-        throw new Exception('Falha ao compactar imagens');
-    }
-    */
-
     // Load the Library
-    require("libs/zip/zip.lib.php");
+    require("libs/zip.lib.php");
 
     // Generate a new object
     $zipfile = new zipFile($newFile);
 
     // Add a folder
     $zipfile->addDirContent("./");
-
-    // Add a single file
-    //$zipfile->addFileAndRead("teste/foto.jpg");
 
     // Output the new zip file
     return $zipfile->file();
@@ -641,78 +625,74 @@ function compactarImagens($dir, $destDir, $nomeDoArquivo)
  */
 function descompactarImagens($dir, $arquivo)
 {
-    $zip_dir = $dir . '/';
-    flog($zip_dir);
-    $zip = zip_open($arquivo);
-
-    if ($zip)
+    $dest_dir = $dir . '/';
+    if ( strlen($arquivo['tmp_name']) > 0 )
     {
-        $zip_dest = $zip_dir;
-        flog('Lendo arquivo '.$arquivo);
-        while ( $zip_entry = zip_read($zip) )
-        {
-            $file = basename(zip_entry_name($zip_entry));
-            if ( strpos($file, '.') )
-            {
-                flog("Descompactando arquivo: $file para $zip_dest");
-                $fp = fopen($zip_dest.basename($file), "w+");
-                if ( zip_entry_open($zip, $zip_entry, "r") )
-                {
-                    $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
-                    zip_entry_close($zip_entry);
-                }
-                else
-                {
-                    throw new Exception("Desculpe, mas ocorreu um erro ao ler o arquivo $file");
-                    die();
-                }
+        $arquivo = $arquivo['tmp_name'];
+    }
 
-                fwrite($fp, $buf);
-                fclose($fp);
-            }
-            else
-            {
-                flog('Criando diretório: '.$file);
-                exec('mkdir ' . $file);
-                $zip_dest = $zip_dir . $file . '/';
-            }
-        }
+    $zip = new ZipArchive();
+    if ( $zip->open($arquivo) )
+    {
+        $zip->extractTo($dest_dir);
+        $zip->close();
+        removeLixo($dest_dir);
     }
     else
     {
-        throw new Exception("Não foi possível ler o arquivo $arquivo.");
-        die();
+        throw new Exception('Não foi possível abrir o arquivo comprimido com as imagens.');
     }
-    zip_close($zip);
+}
 
-    /*$zip_dir = $dir.'/';
-    $zip = zip_open($arquivo);
-    if ($zip)
+/**
+ * Remove tudo que NÃO for: .jpg, .jpeg, .bmp, .gif e .png
+ */
+function removeLixo($dir)
+{
+    // Tudo que não for imagem será deletado
+    $valid_headers = array(
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/bmp'
+    );
+
+    foreach ( (array)glob($dir.'*', GLOB_BRACE) as $file )
     {
-        while ( $zip_entry = zip_read($zip) )
+        if ( is_dir($file) )
         {
-            $file = basename(zip_entry_name($zip_entry));
-            $fp = fopen($zip_dir.basename($file), "w+");
-            if ( zip_entry_open($zip, $zip_entry, "r") )
+            // Recursividade
+            removeLixo($file.'/');
+        }
+        else
+        {
+            $mime_type = image_type_to_mime_type(exif_imagetype($file));
+            if ( !in_array($mime_type, $valid_headers) )
             {
-                $buf = zip_entry_read($zip_entry, zip_entry_filesize($zip_entry));
-                zip_entry_close($zip_entry);
+                flog('apagando: '.$file);
+                exec('rm -Rf '.$file);
             }
             else
             {
-                throw new Exception('Desculpe, mas ocorreu um erro ao ler o arquivo '.$file);
-            }
-            fwrite($fp, $buf);
-            fclose($fp);
+                $array = explode('/', $file);
+                $nomeDoArquivo = $array[count($array)-1];
+                unset($array[count($array)-1]);
+                $base_dir = implode('/', $array);
 
-            //echo "O arquivo $file foi extraído com sucesso para: $zip_dir\n<br>";
+                $array = explode('.', $nomeDoArquivo);
+                unset($array[count($array)-1]);
+                $novoNome = removeSpecialChars(implode('.', $array));
+                if ( $mime_type == 'image/jpeg' ) { $extensao = 'jpg'; }
+                if ( $mime_type == 'image/png' ) { $extensao = 'png'; }
+                if ( $mime_type == 'image/gif' ) { $extensao = 'gif'; }
+                if ( $mime_type == 'image/bmp' ) { $extensao = 'bmp'; }
+                $fileNew = $base_dir.'/'.$novoNome.'.'.$extensao;
+                flog($file);
+                flog($fileNew);
+                exec('mv '.$file.' '.$fileNew);
+            }
         }
     }
-    else
-    {
-        throw new Exception('Não foi possível ler o arquivo.');
-    }
-    zip_close($zip);*/
 }
 
 /**
@@ -743,12 +723,23 @@ function obterFotosCompactadas($dir, $arquivo)
  */
 function removeSpecialChars($oldText)
 {
+    // Se corrige os acentos com iso, taca iso
+    if ( strlen($oldText) > strlen(utf8_decode($oldText)) )
+    {
+        $oldText = utf8_decode($oldText);
+    }
+
     /*
      * A função "strtr" substitui os caracteres acentuados pelos não acentuados.
      * A função "ereg_replace" utiliza uma expressão regular que remove todos os
      * caracteres que não são letras, números e são diferentes de "_" (underscore).
      */
-    $newText = ereg_replace("[^a-zA-Z0-9_]", "", strtr($oldText, "áàãâéêíóôõúüçÁÀÃÂÉÊÍÓÔÕÚÜÇ ", "aaaaeeiooouucAAAAEEIOOOUUC_"));
+    $newText = ereg_replace("[^a-zA-Z0-9_-]", "", strtr($oldText, "áàãâéêíóôõúüçÁÀÃÂÉÊÍÓÔÕÚÜÇ ", "aaaaeeiooouucAAAAEEIOOOUUC_"));
+
+    if ( !(strlen($newText) > 0) )
+    {
+        $newText = 'nome_invalido'.getRandomNumbers().getRandomNumbers();
+    }
 
     return $newText;
 }
