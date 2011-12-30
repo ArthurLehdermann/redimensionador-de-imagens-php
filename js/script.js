@@ -108,38 +108,84 @@ function removeTamanhos()
 
 /**
  * Quando preenchido um campo de imagem, adiciona outro
+ * <input type="file" id="imagens[]" name="imagens[]" class="campoFile">
  */
 var count_fileField = 1;
-function add_filefield()
+function add_fileField()
 {
     var form = document.getElementById('div_imagens');
     var element = form.getElementsByTagName('input');
 
     if ( (count_fileField == 1) || (element[element.length-1].value != '') )
     {
+        var br = document.createElement('br');
         var label = document.createElement('label');
-        label.textContent = 'Nome da imagem ' + count_fileField;
-        var br1 = document.createElement('br');
-        var nome = document.createElement('input');
-        nome.setAttribute('type', 'text');
-        nome.setAttribute('id', 'nome_imagem[]');
-        nome.setAttribute('name', 'nome_imagem[]');
-        var br2 = document.createElement('br');
+        label.textContent = count_fileField + '- ';
+        label.setAttribute('style','width:25px;margin-top:3px;');
         var novo = document.createElement('input');
         novo.setAttribute('type','file');
         novo.setAttribute('id','imagens[]');
         novo.setAttribute('name','imagens[]');
         novo.setAttribute('class','campoFile');
-        novo.setAttribute('onchange','add_filefield();');
-        var br3 = document.createElement('br');
-        var br4 = document.createElement('br');
+        novo.setAttribute('onchange','add_fileField();validaImagens(this);');
+
         form.insertBefore(label, element[element.length]);
-        form.insertBefore(br1, element[element.length]);
-        form.insertBefore(nome, element[element.length]);
-        form.insertBefore(br2, element[element.length]);
         form.insertBefore(novo, element[element.length]);
-        form.insertBefore(br3, element[element.length]);
-        form.insertBefore(br4, element[element.length]);
+        form.insertBefore(br, element[element.length]);
         count_fileField++;
+    }
+}
+
+/**
+ * Quando preenchido um campo de arquivo .ZIP, adiciona outro
+ * <input type="file" id="compactadas[]" name="compactadas[]" class="campoFile">
+ */
+var count_zipField = 1;
+function add_zipField()
+{
+    var form = document.getElementById('div_zips');
+    var element = form.getElementsByTagName('input');
+
+    if ( (count_fileField == 1) || (element[element.length-1].value != '') )
+    {
+        var br = document.createElement('br');
+        var label = document.createElement('label');
+        label.textContent = count_zipField + '- ';
+        label.setAttribute('style','width:25px;margin-top:3px;');
+        var novo = document.createElement('input');
+        novo.setAttribute('type','file');
+        novo.setAttribute('id','compactadas[]');
+        novo.setAttribute('name','compactadas[]');
+        novo.setAttribute('class','campoFile');
+        novo.setAttribute('onchange','add_zipField();validaZip(this);');
+
+        form.insertBefore(label, element[element.length]);
+        form.insertBefore(novo, element[element.length]);
+        form.insertBefore(br, element[element.length]);
+        count_zipField++;
+    }
+}
+
+function validaImagens(elemento)
+{
+    var tipo = elemento.value.substr(-4).toLowerCase();
+    if ( (tipo != '.jpg') &&
+         (tipo != 'jpeg') &&
+         (tipo != '.bmp') &&
+         (tipo != '.gif') &&
+         (tipo != '.png') &&
+         (tipo != '') )
+    {
+        alert('Formato inválido!');
+        elemento.value = '';
+    }
+}
+
+function validaZip(elemento)
+{
+    if ( elemento.value.substr(-4).toLowerCase() != '.zip' )
+    {
+        alert('Formato inválido!');
+        elemento.value = '';
     }
 }
