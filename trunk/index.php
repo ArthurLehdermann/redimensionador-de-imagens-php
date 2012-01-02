@@ -35,6 +35,12 @@ body {background-image: url(http://www.univates.br/media/sistemas/verde.png);}
                     Preferências
                 </legend>
                 <div id="div_preferencias">
+                    <span id="campo_nome_padrao">
+                        Se desejado, informe um nome padrão:<br />
+                        <input type="text" id="nome_padrao" name="nome_padrao"/><br />
+                        <small>Ex.: <b>foto_%n</b><br />
+                        Obs.: "%n" é um curinga que será substituído por um número crescente que começa em 1.</small><br /><br />
+                    </span>
                     <span id="camposTamanho">
                         <!-- Campos dos tamanhos -->
                         <script>adicionaTamanhos();</script>
@@ -51,7 +57,7 @@ body {background-image: url(http://www.univates.br/media/sistemas/verde.png);}
                                 <option value="jpg" checked>jpg</option>
                                 <option value="png">png</option>
                             </select>
-                        </span>
+                    </span>
                 </div>
             </fieldset>
             <fieldset class="direita" >
@@ -131,10 +137,16 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
         }
 
         // Opção de conversão de formato de imagem
-        $converterPara = ($_POST['converter']) ? $_POST['converterPara'] : null;
-    
+        $converterPara = ($_POST['converter']) ? $_POST['converterPara'] : NULL;
+
+        // Opção de nome padrão
+        $nome_padrao = (strlen($_POST['nome_padrao']) > 0) ? $_POST['nome_padrao'] : NULL;
+
+        // Opção de miniatura
+        $posicao_miniatura = (strlen($_POST['miniatura'][0]) > 0) ? $_POST['miniatura'][0] : NULL;
+
         // Converte/redimensiona
-        $imagem = new imagem($fotos, $_POST['altura'], $_POST['largura'], $dir, $converterPara);
+        $imagem = new imagem($fotos, $_POST['altura'], $_POST['largura'], $dir, $converterPara, $nome_padrao, $posicao_miniatura);
 
         // Imagens prontas
         $novasImagens = $imagem->obterDiretorioNovasImagens();

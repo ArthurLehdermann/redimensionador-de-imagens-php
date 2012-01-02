@@ -75,13 +75,28 @@ function adicionaTamanhos()
     input2.setAttribute('name','largura[]');
     input2.setAttribute('class','campoAlturaLargura');
     input2.setAttribute('onchange','somenteNumeros(this);');
-    
+
+    var miniatura = document.createElement('label');
+    miniatura.textContent = 'Miniatura: ';
+    miniatura.setAttribute('title', 'Se marcado adiciona o prefixo "thumb_" na frente do nome');
+    campo_miniatura = document.createElement('input');
+    campo_miniatura.setAttribute('type','radio');
+    campo_miniatura.setAttribute('id', 'miniatura[]');
+    campo_miniatura.setAttribute('name', 'miniatura[]');
+    campo_miniatura.setAttribute('value', countTamanhos);
+    campo_miniatura.setAttribute('title', 'Se marcado adiciona o prefixo "thumb_" na frente do nome');
+ 
     span.insertBefore(label1, elements[elements.length]);
     span.insertBefore(input1, elements[elements.length]);
     var br = document.createElement('br');
     span.insertBefore(br, elements[elements.length]);
     span.insertBefore(label2, elements[elements.length]);
     span.insertBefore(input2, elements[elements.length]);
+    var br = document.createElement('br');
+    span.insertBefore(br, elements[elements.length]);
+    span.insertBefore(miniatura, elements[elements.length]);
+    span.insertBefore(campo_miniatura, elements[elements.length]);
+    var br = document.createElement('br');
     var br = document.createElement('br');
     span.insertBefore(br, elements[elements.length]);
     countTamanhos++;
