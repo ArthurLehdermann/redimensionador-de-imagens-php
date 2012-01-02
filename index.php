@@ -25,7 +25,7 @@ body {background-image: url(http://www.univates.br/media/sistemas/verde.png);}
                 </div>
             </div>
             <div id="cabecalho">
-                <img src="http://www.univates.br/media/sistemas/lupa.png" style="width:55px;height:43px;margin-bottom:-14px;"> Redimensionador de imagens v2.0 ;-)
+                <img src="http://www.univates.br/media/sistemas/lupa.png" style="width:55px;height:43px;margin-bottom:-14px;"> Redimensionador de imagens v2.2 ;-)
                 <hr>
             </div>
         </div>
