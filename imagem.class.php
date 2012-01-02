@@ -25,7 +25,8 @@ class imagem
     private $larguras = array();
     private $pasta = '';
     private $converterPara = null;
-
+    private $nome_padrao = null;
+    private $posicao_miniatura = null;
     private $novoDiretorio;
 
     /**
@@ -41,7 +42,7 @@ class imagem
      * @param $converterPara Converter para 'jpg' ou para 'png'
      * @return String nome do diretório onde ficaram as imagens redimensionadas
      */
-    public function __construct($imagens, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null)
+    public function __construct($imagens, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null, $nome_padrao=null, $posicao_miniatura=null)
     {
         // Popula
         $this->imagens = $imagens;
@@ -49,6 +50,8 @@ class imagem
         $this->larguras = $larguras;
         $this->pasta = $pasta;
         $this->converterPara = $converterPara;
+        $this->nome_padrao = trim($nome_padrao);
+        $this->posicao_miniatura = $posicao_miniatura;
 
         // Gera as novas imagens
         $this->gerarImagens();
@@ -83,7 +86,7 @@ class imagem
                 $larguraMax = $this->larguras[$i];
 
                 // Percorre cada imagem
-                foreach ( $this->imagens as $imagem )
+                foreach ( $this->imagens as $count => $imagem )
                 {
                     // Extensão da imagem
                     $nomeArray = explode('.', $imagem['name']);
@@ -91,19 +94,35 @@ class imagem
                     unset($nomeArray[count($nomeArray)-1]);
                     $nome = trim(implode('.', $nomeArray));
 
-                    // Altera o nome da imagem
-                    if ( strlen($imagem['novo_nome']) > 0 )
-                    {
-                        $nome = $imagem['novo_nome'];
-                    }
-
                     // Altera o nome
                     $nome_novo = '';
-                    if ( $quantidade > 1 )
+                    if ( !is_null($this->posicao_miniatura) &&
+                         ($this->posicao_miniatura == ($i+1)) )
                     {
-                        $nome_novo .= ($i+1).'-';
+                        $nome_novo = 'thumb_';
                     }
-                    $nome_novo .= removeSpecialChars($nome).'.'.$extensao;
+
+                    if ( strlen(trim($this->nome_padrao)) > 0 )
+                    {
+                        if ( strpos($this->nome_padrao, '%n') )
+                        {
+                            $nome_novo .= str_replace('%n', ($count+1), $this->nome_padrao);
+                        }
+                        else
+                        {
+                            $nome_novo .= $this->nome_padrao.($count+1);
+                        }
+                    }
+                    else
+                    {
+                        if ( $quantidade > 2 || (($quantidade > 1) && (is_null($this->posicao_miniatura))) )
+                        {
+                            $nome_novo .= ($i+1).'-';
+                        }
+                        $nome_novo .= removeSpecialChars($nome);
+                    }
+                    $nome_novo .= '.'.$extensao;
+
                     flog('---------------------------');
                     flog('Gerando imagem: '.$nome_novo);
                     flog('com largura máxima: '.$larguraMax);
@@ -374,29 +393,14 @@ class imagem
             // E também definida largura máxima
             if ( $larguraMax )
             {
-                // Largura e altura máxima definidas
-                // Diferença da altura da imagem para a altura máxima
-                $difAltura = $alturaMax-$altura;
-                if ( $difAltura < 0 )
-                {
-                    // Caso dê a diferença negativa, inverte o sinal
-                    $difAltura = $diffAltura * (-1);
-                }
-                // Diferença da largura da imagem para a largura máxima
-                $difLargura = $larguraMax-$largura;
-                if ( $difLargura < 0 )
-                {
-                    $difLargura = $difLargura * (-1);
-                }
-
-                // Calcula novas dimensoes
-                if ( $dfLargura > $difAltura )
+                $novaLargura = ($alturaMax * $largura) / $altura;
+                if ( $novaLargura > $larguraMax)
                 {
                     $alturaMax = ($larguraMax * $altura) / $largura;
                 }
                 else
                 {
-                    $larguraMax = ($alturaMax * $largura) / $altura;
+                    $larguraMax = $novaLargura;
                 }
             }
             else
@@ -630,10 +634,11 @@ function compactarImagens($dir, $destDir, $nomeDoArquivo)
     if ( $criou )
     {
         // Adicionando as imagens redimensionadas
-        foreach ( (array)glob($dir.'*', GLOB_BRACE) as $file )
+        foreach ( (array)glob($dir.'/{*jpg,*png,*gif}', GLOB_BRACE) as $file )
         {
             // Copiando arquivo
-            $zip->addFile($file);
+            $arrayName = explode('/', $file);
+            $zip->addFile($file, $arrayName[count($arrayName)-1]);
         }
 
         // Salvando o arquivo
@@ -655,7 +660,7 @@ function compactarImagens($dir, $destDir, $nomeDoArquivo)
  */
 function descompactarImagens($dir, $arquivo)
 {
-    flog('Descompactando imagens de: '.$arquivo);
+    flog('Descompactando imagens de: '.$arquivo['tmp_name']);
     $dest_dir = $dir.'/';
     if ( strlen($arquivo['tmp_name']) > 0 )
     {
@@ -725,16 +730,26 @@ function removeLixo($dir)
                 $novoNome = removeSpecialChars($nomeDoArquivo);
 
                 // Extensão
-                if ( $mime_type == 'image/jpeg' ) { $extensao = 'jpg'; }
-                if ( $mime_type == 'image/png' ) { $extensao = 'png'; }
-                if ( $mime_type == 'image/gif' ) { $extensao = 'gif'; }
-                if ( $mime_type == 'image/bmp' ) { $extensao = 'bmp'; }
-                $fileNew = $base_dir.'/'.$novoNome.'.'.$extensao;
+                $fileNew = $base_dir.'/'.$novoNome.'.'.obtem_extensao($file);
 
                 exec('mv '.str_replace(' ', '\\ ', $file).' '.$fileNew);
             }
         }
     }
+}
+
+/**
+ * Obtém a extensão do arquivo a partir do MIME
+ */
+function obtem_extensao($image)
+{
+    $mime_type = image_type_to_mime_type(exif_imagetype($image));
+    if ( $mime_type == 'image/jpeg' ) { $extensao = 'jpg'; }
+    if ( $mime_type == 'image/png' ) { $extensao = 'png'; }
+    if ( $mime_type == 'image/gif' ) { $extensao = 'gif'; }
+    if ( $mime_type == 'image/bmp' ) { $extensao = 'bmp'; }
+
+    return $extensao;
 }
 
 /**
