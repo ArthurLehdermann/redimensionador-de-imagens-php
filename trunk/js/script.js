@@ -53,27 +53,27 @@ function somenteNumeros(field)
 /**
  * Adiciona um campo altura/largura
  */
-var countTamanhos = 1;
+var countTamanhos = 0;
 function adicionaTamanhos()
 {
     var span = document.getElementById('camposTamanho');
     var elements = span.getElementsByTagName('input');
 
     var label1 = document.createElement('label');
-    label1.textContent = 'Altura máxima ' + countTamanhos;
+    label1.textContent = 'Altura máxima ' + (1+countTamanhos);
     var input1 = document.createElement('input');
     input1.setAttribute('type','text');
     input1.setAttribute('id','altura[]');
     input1.setAttribute('name','altura[]');
-    input1.setAttribute('class','campoAlturaLargura');
+    input1.setAttribute('class','campoAlturaLargura botao');
     input1.setAttribute('onchange','somenteNumeros(this);');
     var label2 = document.createElement('label');
-    label2.textContent = 'Largura máxima ' + countTamanhos;
+    label2.textContent = 'Largura máxima ' + (1+countTamanhos);
     var input2 = document.createElement('input');
     input2.setAttribute('type','text');
     input2.setAttribute('id','largura[]');
     input2.setAttribute('name','largura[]');
-    input2.setAttribute('class','campoAlturaLargura');
+    input2.setAttribute('class','campoAlturaLargura botao');
     input2.setAttribute('onchange','somenteNumeros(this);');
 
     var miniatura = document.createElement('label');
@@ -100,6 +100,12 @@ function adicionaTamanhos()
     var br = document.createElement('br');
     span.insertBefore(br, elements[elements.length]);
     countTamanhos++;
+
+    // Exive o botão "-"
+    if ( countTamanhos > 1 )
+    {
+        document.getElementById('menos').style.display='block';
+    }
 }
 
 /**
@@ -110,44 +116,20 @@ function removeTamanhos()
     var span = document.getElementById('camposTamanho');
     var elements = span.getElementsByTagName('*');
 
-    if ( elements.length > 12 )
+    if ( countTamanhos > 1 )
     {
-        for ( var i=0; i < 6; i++)
+        for ( var i=0; i < 9; i++)
         {
             span.removeChild(elements[elements.length-1]);
         }
 
         countTamanhos--;
     }
-}
 
-/**
- * Quando preenchido um campo de imagem, adiciona outro
- * <input type="file" id="imagens[]" name="imagens[]" class="campoFile">
- */
-var count_fileField = 1;
-function add_fileField()
-{
-    var form = document.getElementById('div_imagens');
-    var element = form.getElementsByTagName('input');
-
-    if ( (count_fileField == 1) || (element[element.length-1].value != '') )
+    // Esconde o botão "-"
+    if ( countTamanhos < 2 )
     {
-        var br = document.createElement('br');
-        var label = document.createElement('label');
-        label.textContent = count_fileField + '- ';
-        label.setAttribute('style','width:25px;margin-top:3px;');
-        var novo = document.createElement('input');
-        novo.setAttribute('type','file');
-        novo.setAttribute('id','imagens[]');
-        novo.setAttribute('name','imagens[]');
-        novo.setAttribute('class','campoFile');
-        novo.setAttribute('onchange','add_fileField();validaImagens(this);');
-
-        form.insertBefore(label, element[element.length]);
-        form.insertBefore(novo, element[element.length]);
-        form.insertBefore(br, element[element.length]);
-        count_fileField++;
+        document.getElementById('menos').style.display='none';
     }
 }
 
@@ -155,31 +137,60 @@ function add_fileField()
  * Quando preenchido um campo de arquivo .ZIP, adiciona outro
  * <input type="file" id="compactadas[]" name="compactadas[]" class="campoFile">
  */
-var count_zipField = 1;
+var count_zipField = 0;
 function add_zipField()
 {
     var form = document.getElementById('div_zips');
     var element = form.getElementsByTagName('input');
 
-    if ( (count_fileField == 1) || (element[element.length-1].value != '') )
-    {
-        var br = document.createElement('br');
-        var label = document.createElement('label');
-        label.textContent = count_zipField + '- ';
-        label.setAttribute('style','width:25px;margin-top:3px;');
-        var novo = document.createElement('input');
-        novo.setAttribute('type','file');
-        novo.setAttribute('id','compactadas[]');
-        novo.setAttribute('name','compactadas[]');
-        novo.setAttribute('class','campoFile');
-        novo.setAttribute('onchange','add_zipField();validaZip(this);');
+    var br = document.createElement('br');
+    var label = document.createElement('label');
+    label.textContent = (1+count_zipField) + '- ';
+    label.setAttribute('style','width:25px;margin-top:3px;');
+    var novo = document.createElement('input');
+    novo.setAttribute('type','file');
+    novo.setAttribute('id','compactadas[]');
+    novo.setAttribute('name','compactadas[]');
+    novo.setAttribute('onchange','validaZip(this);');
+    novo.setAttribute('class','campoFile botao');
 
-        form.insertBefore(label, element[element.length]);
-        form.insertBefore(novo, element[element.length]);
-        form.insertBefore(br, element[element.length]);
-        count_zipField++;
+    form.insertBefore(label, element[element.length]);
+    form.insertBefore(novo, element[element.length]);
+    form.insertBefore(br, element[element.length]);
+    count_zipField++;
+
+    // Exive o botão "-"
+    if ( count_zipField > 1 )
+    {
+        document.getElementById('menos_zips').style.display='block';
     }
 }
+
+/**
+ * Remove campo de arquivo ZIP 
+ */
+function removeCampoZipField()
+{
+    var div = document.getElementById('div_zips');
+    var elements = div.getElementsByTagName('*');
+
+    if ( count_zipField > 1 )
+    {
+        for ( var i=0; i < 3; i++)
+        {
+            div.removeChild(elements[elements.length-1]);
+        }
+
+        count_zipField--;
+    }
+
+    // Esconde o botão "-"
+    if ( count_zipField < 2 )
+    {
+        document.getElementById('menos_zips').style.display='none';
+    }
+}
+
 
 function validaImagens(elemento)
 {
