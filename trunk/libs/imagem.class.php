@@ -44,7 +44,7 @@ class imagem
      * @param $converterPara Converter para 'jpg' ou para 'png'
      * @return String nome do diretório onde ficaram as imagens redimensionadas
      */
-    public function __construct($imagens, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null, $nome_padrao=null, $posicao_miniatura=null)
+    public function __construct($imagens=null, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null, $nome_padrao=null, $posicao_miniatura=null)
     {
         // Popula
         $this->imagens = $imagens;
