@@ -6,5 +6,5 @@ $zip_file = $_GET['path'];
 header('Content-Type: application/octet-stream');
 header('Content-Disposition: attachment; filename="compactadas.zip"'); 
 header('Content-Transfer-Encoding: binary');
-readfile($zip_archive);
+readfile($zip_file);
 ?>
