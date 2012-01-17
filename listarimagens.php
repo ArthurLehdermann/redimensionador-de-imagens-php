@@ -16,7 +16,7 @@ if ( count($imagens) > 0 )
     foreach ( $imagens as $img )
     {
         // imprime a imagem
-        echo '<img src="'.$img.'"/><br />';
+        echo '<img src="exibe_imagem.php?path='.$img.'"/><br />';
     }
 }
 else
