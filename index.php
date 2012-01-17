@@ -219,7 +219,7 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
         if ( strlen($novasImagens) > 0 )
         {
             echo "<script>informacao('Imagens redimensionadas com sucesso!');</script>";
-            echo "<br /><a href=\"listarimagens.php?path=media$novasImagens\" target=\"_blank\">Clique aqui</a> para vê-las.<br /> Ou <a href=\"media$compactadas\" target=\"_blank\">clique aqui</a> para fazer o download.";
+            echo "<br /><a href=\"listarimagens.php?path=$novasImagens\" target=\"_blank\">Clique aqui</a> para vê-las.<br /> Ou <a href=\"compactadas.php?path=$compactadas\" target=\"_blank\">clique aqui</a> para fazer o download.";
         }
         else
         {
