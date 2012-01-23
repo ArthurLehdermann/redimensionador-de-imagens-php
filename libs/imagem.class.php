@@ -1,5 +1,6 @@
 <?php
 require_once('utils.class.php');
+require_once('canvas/canvas.php');
 
 /**
  * Classe para trabalhar com redimensionamento de imagens
@@ -89,6 +90,14 @@ class imagem
                 // Percorre cada imagem
                 foreach ( $this->imagens as $count => $imagem )
                 {
+                    // Obtém as dimensões originais
+                    list( $alturaOld,
+                          $larguraOld ) = $this->obterAlturaLargura($imagem['tmp_name']);
+
+                    // Calcula as novas dimensões
+                    list( $altura,
+                          $largura ) = $this->calcularNovasDimensoes($alturaOld, $larguraOld, $alturaMax, $larguraMax);
+
                     // Extensão da imagem
                     $nomeArray = explode('.', $imagem['name']);
                     $extensao = trim($nomeArray[count($nomeArray)-1]);
@@ -125,10 +134,8 @@ class imagem
                     $nome_novo .= '.'.$extensao;
 
                     flog('---------------------------');
-                    flog('Gerando imagem: '.$nome_novo);
-                    flog('com largura máxima: '.$larguraMax);
-                    flog('e altura máxima: '.$alturaMax);
-                    $this->gerarImagem($imagem, $alturaMax, $larguraMax, $pasta, $nome_novo, $this->converterPara);
+                    flog('Gerando imagem: '.$nome_novo.' em: '.$pasta, 'de largura: '.$largura, 'e de altura: '.$altura);
+                    $this->gerarImagem($imagem, $altura, $largura, $pasta, $nome_novo, $this->converterPara);
                     flog('Imagem gerada com sucesso!');
                 }
             }
@@ -151,208 +158,24 @@ class imagem
      * @param $converterPara Converter para 'jpg' ou para 'png'. Padrão NULL (mantém formato original.
      * @return String nome do diretório completo da imagem redimensionada.
      */
-    public function gerarImagem($imagem, $alturaMax, $larguraMax, $pasta, $nome, $converterPara)
+    public function gerarImagem($imagem, $altura, $largura, $pasta, $nome, $converterPara)
     {
-        /*
-         * Verifica o tipo da imagem e "importa-a"
-         */
-        // JPG / JPEG
-        if ( $imagem['type'] == 'image/jpeg' )
-        {
-            $img = imageCreateFromJPEG($imagem['tmp_name']);
-        }
-        // PNG
-        elseif ( $imagem['type'] == 'image/png' )
-        {
-            $img = imageCreateFromPNG($imagem['tmp_name']);
-        }
-        // GIF
-        elseif ( $imagem['type'] == 'image/gif' )
-        {
-            // Se for converter
-            if ( !is_null($converterPara) )
-            {
-                $img = imageCreateFromGIF($imagem['tmp_name']);
-            }
-            else
-            {
-                // Mantém a transparência (a animação é perdida)
-                return $this->criarImagemGIF($imagem, $alturaMax, $larguraMax, $pasta, $nome);
-            }
-        }
-        // BMP
-        elseif ( $imagem['type'] == 'image/bmp' )
-        {
-            // Será convertida para PNG
-            $img = $this->criarImagemBMP($imagem['tmp_name']);
-        }
-        // Formato não suportado
-        else
-        {
-            $msg = self::ERRO_FORMATO_NAO_SUPORTADO;
-            $msg = str_replace('$imagemType', $imagem['type'], $msg);
-            throw new Exception($msg);
-        }
+        // Carrega a classe canvas
+        $img = new canvas();
 
-        // Calcula nova altura/largura
-        $dimensoesOriginais = $this->obterAlturaLargura($img);
-        $alturaOriginal = $dimensoesOriginais['altura'];
-        $larguraOriginal = $dimensoesOriginais['largura'];
+        // Define que é pra converter extensão
+        $img->convert_to($converterPara);
 
-        $novasDimensoes = $this->calcularNovasDimensoes($alturaOriginal, $larguraOriginal, $alturaMax, $larguraMax);
-        $altura = $novasDimensoes['altura'];
-        $largura = $novasDimensoes['largura'];
-        flog('nova largura: '.$largura);
-        flog('nova altura: '.$altura);
+        // Importa a imagem
+        $img->load($imagem['tmp_name']); //load_url() para obter a partir da web
 
-        // Cria nova imagem
-        if ( $nova = imageCreateTrueColor($largura, $altura) )
-        {
-            imageAlphaBlending($nova, false);
+        // Redimensiona
+        $img->resize($largura, $altura, "fill")->save($pasta.'/'.$nome);
 
-            // Mantém transparência para PNG
-            $isTrueColor = imageIsTrueColor($img);
-            if ( $isTrueColor )
-            {
-                imageSaveAlpha($nova, true);
-            }
-            else
-            {
-                $transparent = imageColorAllocateAlpha($nova, 0, 0, 0, 127);
-                imageFill($nova, 0, 0, $transparent);
-                imageSaveAlpha($nova, true);
-                imageAlphaBlending($nova, true);
-            }
+        // Marca d'agua
+//        $img->merge("example.png", array("right", "bottom"), 60)->show();
 
-            // Copia a imagem para o diretório destino ($this->pasta)
-            $msg = self::ERRO_CRIAR_NOVA_IMAGEM;
-            if ( !imagecopyresampled($nova, $img, 0, 0, 0, 0, $largura, $altura, $larguraOriginal, $alturaOriginal) )
-            {
-                $msg = str_replace('$n', '1', $msg);
-                throw new Exception($msg);
-            }
-
-            if ( !is_null($converterPara) )
-            {
-                if ( $converterPara == 'jpg' )
-                {
-                    $nomeArray = explode('.', $nome);
-                    $nomeArray[count($nomeArray)-1] = 'jpg';
-                    $nome = implode('.', $nomeArray);
-                    if ( !imagejpeg($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '2', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-                elseif( $converterPara == 'png' )
-                {
-                    $nomeArray = explode('.', $nome);
-                    $nomeArray[count($nomeArray)-1] = 'png';
-                    $nome = implode('.', $nomeArray);
-                    if ( !imagepng($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '3', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-                else
-                {
-                    $msg = self::ERRO_CONVERTER;
-                    $msg = str_replace('$converterPara', $converterPara, $msg);
-                    throw new Exception($msg);
-                }
-            }
-            else
-            {
-                // JPG / JPEG
-                if ( $imagem['type'] == 'image/jpeg' )
-                {
-                    if ( !imagejpeg($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '4', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-                // PNG
-                elseif ( $imagem['type'] == 'image/png' )
-                {
-                    if ( !imagepng($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '5', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-                // GIF
-                elseif ( $imagem['type'] == 'image/gif' )
-                {
-                    if ( !imagegif($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '6', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-                // BMP - converte para png
-                elseif ( $imagem['type'] == 'image/bmp' )
-                {
-                    $nomeArray = explode('.', $nome);
-                    $nomeArray[count($nomeArray)-1] = 'png';
-                    $nome = implode('.', $nomeArray);
-                    if ( !imagepng($nova, $pasta."/".$nome) )
-                    {
-                        $msg = str_replace('$n', '7', $msg);
-                        throw new Exception($msg);
-                    }
-                }
-            }
-        }
-        else
-        {
-            throw new Exception(self::ERRO_CRIAR_NOVA_IMAGEM_GD);
-        }
-
-        /*
-         * Libera memória associada as imagens
-         */
-        $msg = self::ERRO_LIBERA_MEMORIA;
-        if ( !imagedestroy($img) )
-        {
-            $msg = str_replace('$n', '1', $msg);
-            throw new Exception($msg);
-        }
-        if ( !imagedestroy($nova) )
-        {
-            $msg = str_replace('$n', '2', $msg);
-            throw new Exception($msg);
-        }
-
-        flog('salva em: '.$pasta.'/'.$nome);
         return $pasta.'/'.$nome;
-    }
-
-    private function criaImagemGif($imagem, $alturaMax, $larguraMax, $pasta, $nome)
-    {
-        $img = imagecreatefromgif($imagem["tmp_name"]);
-
-        // Pega o Tamanho da Imagem
-        $largura = imagesX($img);
-        $altura = imagesY($img);
-
-        // Define a Largura para a Imagem
-        $novaLargura = $largura;
-
-        // Faz o Calculo para Definir o Tamanho da Imagem
-        $ratio = $novaLargura / $largura;
-        $novaLargura = $altura * $ratio;
-
-        // Cria uma Imagem Temporaria com o Novo Tamanho
-        $img_temp = imageCreateTrueColor($novaLargura, $novaAltura);
-
-        // Muda o tamanho da Imagem Original de Acordo com a Imagem Temporaria
-        imageCopyResampled($img_temp, $img, 0, 0, 0, 0, $novaLargura, $novaAltura, $largura, $altura);
-
-        // Copia a Imagem Original Alterada substituindo a Imagem Original Padrão
-        imageGif($img_temp, $pasta."/".$nome, 100);
     }
 
     /**
@@ -362,8 +185,8 @@ class imagem
      */
     public function obterAlturaLargura($imagem)
     {
-        $altura = imagesY($imagem);
-        $largura = imagesX($imagem);
+        list( $largura,
+              $altura ) = getImageSize($imagem);
 
         if ( !$altura )
         {
@@ -374,8 +197,8 @@ class imagem
             throw new Exception('Não foi possível obter a largura da imagem.');
         }
 
-        return array( 'altura' => (int)$altura,
-                      'largura' => (int)$largura );
+        return array( (int)$altura,
+                      (int)$largura );
     }
 
     /**
@@ -386,7 +209,7 @@ class imagem
      * @param $larguraMax Largura máxima
      * @return Array associativo de duas posições ('altura' e 'largura')
      */
-    public function calcularNovasDimensoes($altura, $largura, $alturaMax, $larguraMax)
+    public function calcularNovasDimensoes($altura, $largura, $alturaMax=null, $larguraMax=null)
     {
         // Caso definido altura máxima
         if ( $alturaMax )
@@ -423,155 +246,8 @@ class imagem
             $larguraMax = $largura;
         }
 
-        return array( 'altura' => (int)$alturaMax,
-                      'largura' => (int)$larguraMax );
-    }
-
-    /*********************************************/
-    /* Fonction: ImageCreateFromBMP              */
-    /* Author:   DHKold                          */
-    /* Contact:  admin@dhkold.com                */
-    /* Date:     The 15th of June 2005           */
-    /* Version:  2.0B                            */
-    /*********************************************/
-    public function criarImagemBMP($filename)
-    {
-        //Ouverture du fichier en mode binaire
-        if ( !$f1 = fopen($filename, "rb") )
-        {
-            return FALSE;
-        }
-
-        //1 : Chargement des ent?tes FICHIER
-        $FILE = unpack("vfile_type/Vfile_size/Vreserved/Vbitmap_offset", fread($f1,14));
-        if ( $FILE['file_type'] != 19778 )
-        {
-            return FALSE;
-        }
-
-        //2 : Chargement des ent?tes BMP
-        $BMP = unpack('Vheader_size/Vwidth/Vheight/vplanes/vbits_per_pixel'.
-                      '/Vcompression/Vsize_bitmap/Vhoriz_resolution'.
-                      '/Vvert_resolution/Vcolors_used/Vcolors_important', fread($f1,40));
-        $BMP['colors'] = pow(2,$BMP['bits_per_pixel']);
-        if ( $BMP['size_bitmap'] == 0 )
-        {
-            $BMP['size_bitmap'] = $FILE['file_size'] - $FILE['bitmap_offset'];
-        }
-        $BMP['bytes_per_pixel'] = $BMP['bits_per_pixel']/8;
-        $BMP['bytes_per_pixel2'] = ceil($BMP['bytes_per_pixel']);
-        $BMP['decal'] = ($BMP['width']*$BMP['bytes_per_pixel']/4);
-        $BMP['decal'] -= floor($BMP['width']*$BMP['bytes_per_pixel']/4);
-        $BMP['decal'] = 4-(4*$BMP['decal']);
-        if ( $BMP['decal'] == 4 )
-        {
-            $BMP['decal'] = 0;
-        }
-
-        //3 : Chargement des couleurs de la palette
-        $PALETTE = array();
-        if ($BMP['colors'] < 16777216 && $BMP['colors'] != 65536)
-        {
-            $PALETTE = unpack('V'.$BMP['colors'], fread($f1,$BMP['colors']*4));
-            #nei file a 16bit manca la palette,
-        }
-
-        //4 : Create the image
-        $IMG = fread($f1,$BMP['size_bitmap']);
-        $VIDE = chr(0);
-
-        $res = imagecreatetruecolor($BMP['width'],$BMP['height']);
-        $P = 0;
-        $Y = $BMP['height']-1;
-        while ( $Y >= 0 )
-        {
-            $X=0;
-            while ( $X < $BMP['width'] )
-            {
-                if ( $BMP['bits_per_pixel'] == 24 )
-                {
-                    $COLOR = unpack("V",substr($IMG,$P,3).$VIDE);
-                }
-                elseif ( $BMP['bits_per_pixel'] == 16 )
-                {
-                    $COLOR = unpack("v",substr($IMG,$P,2));
-                    $blue  = (($COLOR[1] & 0x001f) << 3) + 7;
-                    $green = (($COLOR[1] & 0x03e0) >> 2) + 7;
-                    $red   = (($COLOR[1] & 0xfc00) >> 7) + 7;
-                    $COLOR[1] = $red * 65536 + $green * 256 + $blue;
-                }
-                elseif ( $BMP['bits_per_pixel'] == 8 )
-                {
-                    $COLOR = unpack("n",$VIDE.substr($IMG,$P,1));
-                    $COLOR[1] = $PALETTE[$COLOR[1]+1];
-                }
-                elseif ( $BMP['bits_per_pixel'] == 4 )
-                {
-                    $COLOR = unpack("n",$VIDE.substr($IMG,floor($P),1));
-                    if ( ($P*2)%2 == 0 )
-                    {
-                        $COLOR[1] = ($COLOR[1] >> 4 );
-                    }
-                    else
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x0F);
-                    }
-                    $COLOR[1] = $PALETTE[$COLOR[1]+1];
-                }
-                elseif ( $BMP['bits_per_pixel'] == 1 )
-                {
-                    $COLOR = unpack("n",$VIDE.substr($IMG,floor($P),1));
-                    if ( ($P*8)%8 == 0 )
-                    {
-                        $COLOR[1] = $COLOR[1] = $COLOR[1]>>7;
-                    }
-                    elseif ( ($P*8)%8 == 1 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x40)>>6;
-                    }
-                    elseif ( ($P*8)%8 == 2 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x20)>>5;
-                    }
-                    elseif ( ($P*8)%8 == 3 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x10)>>4;
-                    }
-                    elseif ( ($P*8)%8 == 4 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x8)>>3;
-                    }
-                    elseif ( ($P*8)%8 == 5 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x4)>>2;
-                    }
-                    elseif ( ($P*8)%8 == 6 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x2)>>1;
-                    }
-                    elseif ( ($P*8)%8 == 7 )
-                    {
-                        $COLOR[1] = ($COLOR[1] & 0x1);
-                    }
-                    $COLOR[1] = $PALETTE[$COLOR[1]+1];
-                }
-                else
-                {
-                    return FALSE;
-                }
-
-                imagesetpixel($res,$X,$Y,$COLOR[1]);
-                $X++;
-                $P += $BMP['bytes_per_pixel'];
-            }
-            $Y--;
-            $P += $BMP['decal'];
-        }
-
-        //Fermeture du fichier
-        fclose($f1);
-
-        return $res;
+        return array( (int)$alturaMax,
+                      (int)$larguraMax );
     }
 
     /**
