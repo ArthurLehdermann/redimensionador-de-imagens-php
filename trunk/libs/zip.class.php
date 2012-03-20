@@ -9,7 +9,7 @@ class zip
      * @param $destDir Destino do arquivo.zip
      * @return string $newFIle Diretório do arquivo.zip com as imagens finais dentro
      */
-    public function compactarImagens($dir, $destDir, $nomeDoArquivo)
+    public function compactarImagens($dir, $destDir, $nomeDoArquivo='')
     {
         $utils = new utils();
         flog('');

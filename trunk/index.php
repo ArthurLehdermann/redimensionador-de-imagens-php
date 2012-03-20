@@ -55,7 +55,7 @@ $(document).ready(function()
         'script' : 'libs/uploadify/uploadify.php?destino=<?=urlencode(base64_encode($destino));?>',
         'cancelImg' : 'media/remover.png',
         'buttonText' : 'Selecionar arquivos',
-        'fileExt'  : '*.jpeg;*.jpg;*.gif;*.png;*.bmp',
+        'fileExt'  : '*.jpeg;*.jpg;*.gif;*.png;*.bmp;*.JPG;*.GIF;*.JPEG;*.BMP;*.PNG',
         'fileDesc' : 'Arquivos',
         'multi'  : true,
         'method' : 'post',
