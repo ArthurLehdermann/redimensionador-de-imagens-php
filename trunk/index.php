@@ -1,15 +1,27 @@
+<?php
+session_start();
+if ( !isset($_SESSION['sistemas']) )
+{
+    header("Location: /sistemas/index.php?url=imagem");
+}
+?>
+
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
         <title>Redimensionador de imagens</title>
         <script type="text/javascript" language="JavaScript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
-        <script type="text/javascript" language="JavaScript" src="http://www.uploadify.com/wp-content/themes/uploadify/_scripts/js/jquery.uploadify.min.js"></script>
         <script type="text/javascript" language="JavaScript" src="http://ajax.googleapis.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
-        <link rel="stylesheet" type="text/css" href="libs/uploadify/uploadify.css"/>
         <link rel="stylesheet" type="text/css" href="css/style.css"/>
         <script type="text/javascript" language="JavaScript" src="js/script.js"></script>
         <link rel="shortcut icon" href="media/favicon.ico" type="image/x-icon"/>
+        <!--Uploadify-->
+         <link href="/libs/uploadify/uploadify.css" type="text/css" rel="stylesheet" />
+         <script type="text/javascript" src="/libs/uploadify/swfobject.js"></script>
+         <script type="text/javascript" src="/libs/uploadify/jquery.uploadify.v2.1.4.min.js"></script>
+
+
     </head>
     <body>
 <?php
