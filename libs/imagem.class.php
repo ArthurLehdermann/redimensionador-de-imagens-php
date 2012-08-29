@@ -37,15 +37,16 @@ class imagem
      *
      * @author Arthur Lehdermann [alehdermann@univates.br]
      *
-     * @param $imagens Array de array associativo com as imagens(estilo $_FILES). Parâmetro obrigatório.
+     * @param Array $imagens Array de array associativo com as imagens(estilo $_FILES). Parâmetro obrigatório.
      * Para alterar o nome da nova imagem, existe a possibilidade de passar um novo nome na posição 'novo_nome'.
-     * @param $alturas Array com as alturas das imagens (isto define quantos redimensionamentos serão feitos)
-     * @param $larguras Array com as larguras das imagens (isto define quantos redimensionamentos serão feitos)
-     * @param $pasta Diretrio onde as imagens serão "jogadas" (padrão 'media' ou 'imagens'). Não precisa '/' no fim.
-     * @param $converterPara Converter para 'jpg' ou para 'png'
+     * @param Array $alturas Array com as alturas das imagens (isto define quantos redimensionamentos serão feitos)
+     * @param Array $larguras Array com as larguras das imagens (isto define quantos redimensionamentos serão feitos)
+     * @param String $pasta Diretrio onde as imagens serão "jogadas" (padrão 'media' ou 'imagens'). Não precisa '/' no fim.
+     * @param String $converterPara Converter para 'jpg' ou para 'png'
+     * @para bool $limpar_nomes Limpar os nomes dos arquivos, padrão false
      * @return String nome do diretório onde ficaram as imagens redimensionadas
      */
-    public function __construct($imagens=null, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null, $nome_padrao=null, $posicao_miniatura=null)
+    public function __construct($imagens=null, $alturas=array(), $larguras=array(), $pasta=null, $converterPara=null, $nome_padrao=null, $posicao_miniatura=null, $limpar_nomes=false)
     {
         // Popula
         $this->imagens = $imagens;
@@ -55,6 +56,7 @@ class imagem
         $this->converterPara = $converterPara;
         $this->nome_padrao = trim($nome_padrao);
         $this->posicao_miniatura = $posicao_miniatura;
+        $this->limpar_nomes = $limpar_nomes;
     }
 
     public function obterDiretorioNovasImagens()
@@ -129,7 +131,15 @@ class imagem
                         {
                             $nome_novo .= ($i+1).'-';
                         }
-                        $nome_novo .= $utils->removeSpecialChars($nome);
+
+                        if ( $this->limpar_nomes )
+                        {
+                            $nome_novo .= $utils->removeSpecialChars($nome);
+                        }
+                        else
+                        {
+                            $nome_novo .= $nome;
+                        }
                     }
                     $nome_novo .= '.'.$extensao;
 
