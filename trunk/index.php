@@ -17,11 +17,9 @@ if ( !isset($_SESSION['sistemas']) )
         <script type="text/javascript" language="JavaScript" src="js/script.js"></script>
         <link rel="shortcut icon" href="media/favicon.ico" type="image/x-icon"/>
         <!--Uploadify-->
-         <link href="/libs/uploadify/uploadify.css" type="text/css" rel="stylesheet" />
-         <script type="text/javascript" src="/libs/uploadify/swfobject.js"></script>
-         <script type="text/javascript" src="/libs/uploadify/jquery.uploadify.v2.1.4.min.js"></script>
-
-
+        <link href="/libs/uploadify/uploadify.css" type="text/css" rel="stylesheet" />
+        <script type="text/javascript" src="/libs/uploadify/swfobject.js"></script>
+        <script type="text/javascript" src="/libs/uploadify/jquery.uploadify.v2.1.4.min.js"></script>
     </head>
     <body>
 <?php
@@ -137,6 +135,14 @@ $(document).ready(function()
                             <option value="png">png</option>
                         </select>
                     </span>
+                    <br /><br />
+                    <label>Limpar o nome dos arquivos:</label>
+                    <span>
+                        <select id="limpar_nomes" name="limpar_nomes">
+                            <option value="t" checked>Sim</option>
+                            <option value="f">Não</option>
+                        </select>
+                    </span>
                 </div>
             </fieldset>
             <fieldset class="direita" >
@@ -218,8 +224,11 @@ if ( (isset($_POST)) && ($_POST['enviado'] == 1) )
         // Opção de miniatura
         $posicao_miniatura = (strlen($_POST['miniatura'][0]) > 0) ? $_POST['miniatura'][0] : NULL;
 
+        // Limpar nome dos arquivos
+        $limpar_nomes = $_POST['limpar_nomes'] == 't';
+
         // Converte/redimensiona
-        $imagem = new imagem($fotos, $_POST['altura'], $_POST['largura'], $dir, $converterPara, $nome_padrao, $posicao_miniatura);
+        $imagem = new imagem($fotos, $_POST['altura'], $_POST['largura'], $dir, $converterPara, $nome_padrao, $posicao_miniatura, $limpar_nomes);
         $imagem->gerarImagens();
 
         // Imagens prontas

@@ -151,8 +151,14 @@ class canvas
 
     private function create_image()
     {
-        $extension = ($this->extension == "jpg" ? "jpeg" : $this->extension);
-        $function_name = "imagecreatefrom{$extension}";
+        $mime_type = image_type_to_mime_type(exif_imagetype($this->file));
+        if ( $mime_type == 'image/jpeg' ) { $this->extension = 'jpg'; }
+        if ( $mime_type == 'image/png' ) { $this->extension = 'png'; }
+        if ( $mime_type == 'image/gif' ) { $this->extension = 'gif'; }
+        if ( $mime_type == 'image/bmp' ) { $this->extension = 'bmp'; }
+        $this->extension = ($this->extension == "jpg" ? "jpeg" : $this->extension);
+
+        $function_name = "imagecreatefrom{$this->extension}";
 
         if ( function_exists($function_name) )
         {
